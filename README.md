@@ -46,6 +46,12 @@ docker compose --env-file .env.production -f docker-compose.prod.yml up -d --bui
 Приложение будет доступно на:
 - `http://<VPS_IP>` (порт 80)
 
+Если после деплоя на экране входа видите `Not Found`, проверьте что фронтенд собран с актуальным `docker-compose.prod.yml` (в нём `VITE_API_BASE_URL` должен быть пустым), затем пересоберите:
+
+```bash
+docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build --force-recreate
+```
+
 ### 4) Обновление после изменений
 
 ```bash
