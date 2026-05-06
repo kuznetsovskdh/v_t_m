@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+SQLAlchemy>=2.0
+aiomysql
+greenlet
+pydantic>=2.0
+python-jose[cryptography]
+bcrypt
+python-dotenv
+openpyxl
+python-multipart
