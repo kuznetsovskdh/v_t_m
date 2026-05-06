@@ -6,6 +6,7 @@ greenlet
 pydantic>=2.0
 python-jose[cryptography]
 bcrypt
+passlib[bcrypt]
 python-dotenv
 openpyxl
 python-multipart

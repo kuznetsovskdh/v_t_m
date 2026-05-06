@@ -2,10 +2,10 @@ import os
 from datetime import datetime, timedelta
 from typing import Any
 
-import bcrypt
 from fastapi import Depends, HTTPException, status
 from jose import JWTError, jwt
 from fastapi.security import OAuth2PasswordBearer
+from passlib.context import CryptContext
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -21,6 +21,7 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 12
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 def create_access_token(*, user_id: int) -> str:
@@ -33,14 +34,7 @@ def create_access_token(*, user_id: int) -> str:
 
 
 def verify_password(plain_password: str, password_hash: str) -> bool:
-    # Support both bcrypt hashes (recommended) and plain test passwords from init.sql.
-    # If it's not a bcrypt hash, treat the stored value as a plain password.
-    if password_hash.startswith("$2"):
-        return bcrypt.checkpw(
-            plain_password.encode("utf-8"),
-            password_hash.encode("utf-8"),
-        )
-    return plain_password == password_hash
+    return pwd_context.verify(plain_password, password_hash)
 
 
 async def get_current_user(

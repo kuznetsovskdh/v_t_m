@@ -39,13 +39,11 @@ CREATE TABLE IF NOT EXISTS votes (
 -- Test data
 INSERT INTO users (username, password_hash, display_name, color)
 VALUES
-  ('judge1', '1111', 'Эксперт 1', '#FF6B6B'),
-  ('judge2', '1111', 'Эксперт 2', '#4ECDC4'),
-  ('judge3', '1111', 'Эксперт 3', '#FFE66D')
+  ('judge1', '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW', 'Эксперт 1', '#FF6B6B'),
+  ('judge2', '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW', 'Эксперт 2', '#4ECDC4'),
+  ('judge3', '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW', 'Эксперт 3', '#FFE66D')
 ON DUPLICATE KEY UPDATE
-  display_name = VALUES(display_name),
-  password_hash = VALUES(password_hash),
-  color = VALUES(color);
+  password_hash = VALUES(password_hash);
 
 INSERT INTO projects (title, description, is_active)
 VALUES
