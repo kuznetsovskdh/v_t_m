@@ -5,6 +5,7 @@ from typing import Any
 from fastapi import Depends, HTTPException, status
 from jose import JWTError, jwt
 from fastapi.security import OAuth2PasswordBearer
+from passlib.exc import UnknownHashError
 from passlib.context import CryptContext
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -34,7 +35,15 @@ def create_access_token(*, user_id: int) -> str:
 
 
 def verify_password(plain_password: str, password_hash: str) -> bool:
-    return pwd_context.verify(plain_password, password_hash)
+    try:
+        return pwd_context.verify(plain_password, password_hash)
+    except (UnknownHashError, ValueError):
+        # Malformed/legacy hashes should not break login endpoint with 500.
+        return False
+
+
+def get_password_hash(password: str) -> str:
+    return pwd_context.hash(password)
 
 
 async def get_current_user(

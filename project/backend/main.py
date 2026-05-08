@@ -7,6 +7,7 @@ from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
+from auth import get_password_hash
 from database import engine
 from models import Base
 from routes.auth import router as auth_router
@@ -75,6 +76,7 @@ app.include_router(pipeline_router)
 @app.on_event("startup")
 async def on_startup() -> None:
     # Useful for local runs without init.sql (Docker already creates schema).
+    test_password_hash = get_password_hash("1111")
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
         # Allow vote history: drop unique index if it exists (older schema).
@@ -82,6 +84,23 @@ async def on_startup() -> None:
             await conn.execute(text("ALTER TABLE votes DROP INDEX uq_user_project_criteria"))
         except Exception:
             pass
+        # Keep demo credentials stable even with persisted DB volumes.
+        await conn.execute(
+            text(
+                """
+                INSERT INTO users (username, password_hash, display_name, color)
+                VALUES
+                  ('judge1', :password_hash, 'Эксперт 1', '#FF6B6B'),
+                  ('judge2', :password_hash, 'Эксперт 2', '#4ECDC4'),
+                  ('judge3', :password_hash, 'Эксперт 3', '#FFE66D')
+                ON DUPLICATE KEY UPDATE
+                  password_hash = VALUES(password_hash),
+                  display_name = VALUES(display_name),
+                  color = VALUES(color)
+                """
+            ),
+            {"password_hash": test_password_hash},
+        )
 
 
 @app.websocket("/ws/{project_id}")
