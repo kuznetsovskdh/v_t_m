@@ -5,7 +5,7 @@ aiomysql
 greenlet
 pydantic>=2.0
 python-jose[cryptography]
-bcrypt
+bcrypt==4.0.1
 passlib[bcrypt]
 python-dotenv
 openpyxl

@@ -23,7 +23,7 @@ function authHeader(token) {
 }
 
 export async function login(username, password) {
-  const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
+  const res = await fetch(`${API_BASE_URL}/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ username, password }),
@@ -34,7 +34,7 @@ export async function login(username, password) {
 }
 
 export async function getMe(token) {
-  const res = await fetch(`${API_BASE_URL}/api/auth/me`, {
+  const res = await fetch(`${API_BASE_URL}/auth/me`, {
     method: "GET",
     headers: { "Content-Type": "application/json", ...authHeader(token) },
   });
@@ -43,7 +43,7 @@ export async function getMe(token) {
 }
 
 export async function getActiveProject(token) {
-  const res = await fetch(`${API_BASE_URL}/api/projects/active`, {
+  const res = await fetch(`${API_BASE_URL}/projects/active`, {
     method: "GET",
     headers: { "Content-Type": "application/json", ...authHeader(token) },
   });
@@ -52,7 +52,7 @@ export async function getActiveProject(token) {
 }
 
 export async function getProjects(token) {
-  const res = await fetch(`${API_BASE_URL}/api/projects`, {
+  const res = await fetch(`${API_BASE_URL}/projects`, {
     method: "GET",
     headers: { "Content-Type": "application/json", ...authHeader(token) },
   });
@@ -61,7 +61,7 @@ export async function getProjects(token) {
 }
 
 export async function postVotes(token, votes) {
-  const res = await fetch(`${API_BASE_URL}/api/votes`, {
+  const res = await fetch(`${API_BASE_URL}/votes`, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authHeader(token) },
     body: JSON.stringify(votes),
@@ -71,7 +71,7 @@ export async function postVotes(token, votes) {
 }
 
 export async function postVotesForProject(token, projectId, votes) {
-  const res = await fetch(`${API_BASE_URL}/api/votes/${projectId}`, {
+  const res = await fetch(`${API_BASE_URL}/votes/${projectId}`, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authHeader(token) },
     body: JSON.stringify(votes),
@@ -81,7 +81,7 @@ export async function postVotesForProject(token, projectId, votes) {
 }
 
 export async function getVotes(token, projectId) {
-  const res = await fetch(`${API_BASE_URL}/api/votes/${projectId}`, {
+  const res = await fetch(`${API_BASE_URL}/votes/${projectId}`, {
     method: "GET",
     headers: { "Content-Type": "application/json", ...authHeader(token) },
   });
@@ -90,7 +90,7 @@ export async function getVotes(token, projectId) {
 }
 
 export async function getVotesStatus(token, projectId) {
-  const res = await fetch(`${API_BASE_URL}/api/votes/${projectId}/status`, {
+  const res = await fetch(`${API_BASE_URL}/votes/${projectId}/status`, {
     method: "GET",
     headers: { "Content-Type": "application/json", ...authHeader(token) },
   });
@@ -99,13 +99,13 @@ export async function getVotesStatus(token, projectId) {
 }
 
 export function getVotesExportUrl() {
-  return `${API_BASE_URL}/api/pipeline/votes/export.xlsx`;
+  return `${API_BASE_URL}/pipeline/votes/export.xlsx`;
 }
 
 export async function importProjectsXlsx(token, file) {
   const form = new FormData();
   form.append("file", file);
-  const res = await fetch(`${API_BASE_URL}/api/pipeline/projects/import`, {
+  const res = await fetch(`${API_BASE_URL}/pipeline/projects/import`, {
     method: "POST",
     headers: { ...authHeader(token) },
     body: form,

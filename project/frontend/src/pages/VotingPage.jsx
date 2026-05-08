@@ -235,7 +235,7 @@ export default function VotingPage({ token }) {
         <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
           {me ? (
             <div className="rounded-full border border-slate-200 bg-white px-3 py-1 text-sm text-slate-800">
-              Вы авторизованы как <span className="font-medium">Эксперт</span>
+              Вы авторизованы как <span className="font-medium">{me.display_name}</span>
             </div>
           ) : (
             <div />
@@ -331,7 +331,7 @@ export default function VotingPage({ token }) {
             {statusData?.judges?.map((j) => (
               <div key={j.user_id} className="flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1">
                 {j.has_voted ? <CheckCircle2 className="h-4 w-4 text-green-600" /> : <Circle className="h-4 w-4 text-slate-400" />}
-                <div className="text-sm text-slate-800">Эксперт</div>
+                <div className="text-sm text-slate-800">{j.display_name}</div>
               </div>
             ))}
           </div>
