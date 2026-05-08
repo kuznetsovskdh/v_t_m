@@ -138,21 +138,29 @@ export default function VotingPage({ token }) {
     return judges.length > 0 && judges.every((j) => j.has_voted);
   }, [statusData]);
 
+  const votesProgress = useMemo(() => {
+    const judges = statusData?.judges ?? [];
+    const total = judges.length;
+    const voted = judges.reduce((acc, j) => acc + (j.has_voted ? 1 : 0), 0);
+    return { voted, total };
+  }, [statusData]);
+
   const итогScore = useMemo(() => {
-    if (!allJuryVoted || !votesData) return null;
-    const judges = votesData.judges ?? [];
-    if (!judges.length) return 0;
+    if (!votesData) return null;
+    const votedJudgeIds = new Set((statusData?.judges ?? []).filter((j) => j.has_voted).map((j) => j.user_id));
+    const votedJudges = (votesData.judges ?? []).filter((j) => votedJudgeIds.has(j.user_id));
+    if (!votedJudges.length) return null;
     let sum = 0;
     for (const c of criteria) {
       let s = 0;
-      for (const j of judges) {
+      for (const j of votedJudges) {
         const found = j.scores?.find((x) => x.criteria_id === c.id);
         s += Number(found?.score ?? 0);
       }
-      sum += s / judges.length;
+      sum += s / votedJudges.length;
     }
     return sum;
-  }, [allJuryVoted, votesData, criteria]);
+  }, [votesData, statusData, criteria]);
 
   async function downloadExcel() {
     setError("");
@@ -230,7 +238,7 @@ export default function VotingPage({ token }) {
   });
 
   return (
-    <div className="min-h-screen bg-slate-50 px-3 py-4 sm:px-4 sm:py-8">
+    <div className="min-h-screen bg-slate-50 px-3 py-4 pb-28 sm:px-4 sm:py-8">
       <div className="mx-auto max-w-5xl space-y-4 sm:space-y-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
           {me ? (
@@ -240,39 +248,6 @@ export default function VotingPage({ token }) {
           ) : (
             <div />
           )}
-          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
-            <label className="inline-flex w-full items-center justify-between gap-2 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 sm:w-auto sm:justify-start">
-              <span className="whitespace-nowrap">Импорт инициатив (XLSX)</span>
-              <input
-                type="file"
-                accept=".xlsx"
-                disabled={!me || importing}
-                onChange={async (e) => {
-                  const f = e.target.files?.[0];
-                  if (!f) return;
-                  setError("");
-                  setImporting(true);
-                  try {
-                    await importProjectsXlsx(token, f);
-                    const list = await getProjects(token);
-                    setProjects(list);
-                    if (!projectId && list.length) {
-                      const first = list[0];
-                      setProject({ id: first.id, title: first.title, description: first.description });
-                    }
-                  } catch (err) {
-                    setError(err?.message || "Import failed");
-                  } finally {
-                    setImporting(false);
-                    e.target.value = "";
-                  }
-                }}
-              />
-            </label>
-            <Button type="button" onClick={downloadExcel} disabled={!me} className="w-full sm:w-auto">
-              Скачать Excel
-            </Button>
-          </div>
         </div>
 
         {notification ? (
@@ -311,16 +286,13 @@ export default function VotingPage({ token }) {
               <p className="mt-2 whitespace-pre-wrap break-words text-sm text-slate-700 sm:text-base">{project?.description ?? ""}</p>
             </div>
             <div className="text-left lg:text-right">
-              {allJuryVoted ? (
-                <>
-                  <div className="text-sm text-slate-500">Итог</div>
-                  <div className="text-xl font-semibold text-slate-900">
-                    {Number.isInteger(итогScore ?? 0) ? итогScore : (итогScore ?? 0).toFixed(1)} / {maxTotal} баллов
-                  </div>
-                </>
-              ) : (
-                <div className="text-sm text-slate-500">Итог появится после голосования всех жюри</div>
-              )}
+              <div className="text-sm text-slate-500">Итог</div>
+              <div className="text-xl font-semibold text-slate-900">
+                {итогScore == null ? "—" : Number.isInteger(итогScore) ? итогScore : итогScore.toFixed(1)} / {maxTotal} баллов
+              </div>
+              <div className="mt-1 text-xs text-slate-500">
+                Средняя оценка считается по числу проголосовавших: 1 голос - деление на 1, 2 голоса - на 2, 3 голоса - на 3.
+              </div>
             </div>
           </div>
 
@@ -328,12 +300,16 @@ export default function VotingPage({ token }) {
 
           <div className="mt-5 flex flex-wrap items-center gap-2 sm:gap-3">
             <div className="text-sm font-medium text-slate-900">Статус проголосовавших</div>
-            {statusData?.judges?.map((j) => (
-              <div key={j.user_id} className="flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1">
-                {j.has_voted ? <CheckCircle2 className="h-4 w-4 text-green-600" /> : <Circle className="h-4 w-4 text-slate-400" />}
-                <div className="text-sm text-slate-800">{j.display_name}</div>
+            <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1">
+              {votesProgress.voted === votesProgress.total && votesProgress.total > 0 ? (
+                <CheckCircle2 className="h-4 w-4 text-green-600" />
+              ) : (
+                <Circle className="h-4 w-4 text-slate-400" />
+              )}
+              <div className="text-sm text-slate-800">
+                Проголосовали: <span className="font-medium">{votesProgress.voted}</span> / {votesProgress.total}
               </div>
-            ))}
+            </div>
           </div>
 
         </div>
@@ -362,6 +338,42 @@ export default function VotingPage({ token }) {
         </form>
 
         <RadarChart votesData={votesData} />
+      </div>
+
+      <div className="fixed inset-x-0 bottom-0 z-50 border-t border-slate-200 bg-white/95 backdrop-blur">
+        <div className="mx-auto flex max-w-5xl flex-col gap-2 px-3 py-3 sm:flex-row sm:items-center sm:justify-end sm:gap-3 sm:px-4">
+          <label className="inline-flex w-full items-center justify-between gap-2 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 sm:w-auto sm:justify-start">
+            <span className="whitespace-nowrap">Импорт инициатив (XLSX)</span>
+            <input
+              type="file"
+              accept=".xlsx"
+              disabled={!me || importing}
+              onChange={async (e) => {
+                const f = e.target.files?.[0];
+                if (!f) return;
+                setError("");
+                setImporting(true);
+                try {
+                  await importProjectsXlsx(token, f);
+                  const list = await getProjects(token);
+                  setProjects(list);
+                  if (!projectId && list.length) {
+                    const first = list[0];
+                    setProject({ id: first.id, title: first.title, description: first.description });
+                  }
+                } catch (err) {
+                  setError(err?.message || "Import failed");
+                } finally {
+                  setImporting(false);
+                  e.target.value = "";
+                }
+              }}
+            />
+          </label>
+          <Button type="button" onClick={downloadExcel} disabled={!me} className="w-full sm:w-auto">
+            Скачать Excel
+          </Button>
+        </div>
       </div>
     </div>
   );
