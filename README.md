@@ -1,22 +1,81 @@
 # Jury Voting MVP
 
-Full-stack MVP для системы оценивания жюри: FastAPI (JWT + WebSocket) + MySQL + React/Vite + RadarChart.
+Система для оценки инициатив жюри из нескольких экспертов. Каждый эксперт заходит под своим логином, выбирает инициативу и выставляет баллы по критериям. Результаты видны в реальном времени на лепестковой диаграмме.
+
+## Возможности
+
+- Авторизация по JWT: каждый эксперт входит со своим логином и паролем
+- Голосование по нескольким критериям с максимальным баллом 5
+- Лепестковая (radar) диаграмма с агрегированными оценками по каждому критерию
+- Статус голосования: видно, кто из экспертов уже проголосовал
+- WebSocket-уведомления: при отправке голоса (`vote_submitted`) и завершении голосования (`voting_complete`) все подключенные клиенты получают обновление без перезагрузки страницы
+- Импорт инициатив из XLSX-файла (`POST /api/pipeline/projects/import`)
+- Выгрузка итогов голосования в XLSX (`GET /api/pipeline/votes/export.xlsx`)
+- Управление активной инициативой: в один момент активна одна инициатива
+
+## Технический стек
+
+| Слой | Технология |
+|---|---|
+| Backend | FastAPI (Python), async SQLAlchemy + aiomysql |
+| База данных | MySQL 8 (utf8mb4) |
+| Frontend | React + Vite, Recharts (RadarChart) |
+| Аутентификация | JWT (python-jose) + bcrypt |
+| Транспорт реального времени | WebSocket (встроенный в FastAPI/Starlette) |
+| Сборка и запуск | Docker, Docker Compose |
+| Prod-раздача фронтенда | nginx (порт 80), он же проксирует `/api` на backend |
+
+### Схема базы данных
+
+- `users` - эксперты (логин, bcrypt-хеш пароля, отображаемое имя, цвет на диаграмме)
+- `projects` - инициативы (заголовок, описание, флаг `is_active`)
+- `criteria` - критерии оценки (название, максимальный балл)
+- `votes` - оценки (связь эксперт + инициатива + критерий + балл)
+
+### API-маршруты
+
+| Метод | Путь | Назначение |
+|---|---|---|
+| POST | `/api/auth/login` | Получить JWT-токен |
+| GET | `/api/auth/me` | Данные текущего пользователя |
+| GET | `/api/projects` | Список инициатив |
+| GET | `/api/votes/{project_id}` | Оценки и данные для диаграммы |
+| POST | `/api/votes/{project_id}` | Отправить голос |
+| GET | `/api/votes/{project_id}/status` | Кто проголосовал |
+| POST | `/api/pipeline/projects/import` | Загрузить инициативы из XLSX |
+| GET | `/api/pipeline/votes/export.xlsx` | Скачать итоги в XLSX |
+| WS | `/ws` | WebSocket-соединение |
 
 ## Локальный запуск (dev)
 
-1. Убедитесь, что установлен `docker` и `docker compose`.
-2. Запустите:
+Требования: `docker` и `docker compose`.
 
 ```bash
-docker-compose up --build
+docker compose up --build
 ```
 
-3. Откройте:
-   - Frontend: [http://localhost:3000](http://localhost:3000)
+Фронтенд будет доступен на [http://localhost:3000](http://localhost:3000).
 
-## Деплой на Ubuntu VPS (prod)
+## Тестовые учетные данные
 
-### 1) Подготовка сервера
+| Логин | Пароль |
+|---|---|
+| judge1 | 1111 |
+| judge2 | 1111 |
+| judge3 | 1111 |
+
+---
+
+## Инструкция к хостингу
+
+### Требования к серверу
+
+- Ubuntu 22.04 LTS (или 20.04)
+- Минимум 1 vCPU, 1 GB RAM, 10 GB диска
+- Открытый порт 80 (и 443, если планируете HTTPS)
+- Доступ по SSH с правами sudo
+
+### 1. Установка Docker
 
 ```bash
 sudo apt update
@@ -24,55 +83,167 @@ sudo apt install -y docker.io docker-compose-plugin git
 sudo systemctl enable --now docker
 ```
 
-### 2) Клонирование проекта и env
+Проверка:
+
+```bash
+docker --version
+docker compose version
+```
+
+Если хотите запускать docker без sudo, добавьте своего пользователя в группу:
+
+```bash
+sudo usermod -aG docker $USER
+newgrp docker
+```
+
+### 2. Получение кода
 
 ```bash
 git clone <your-repo-url> jury-voting
 cd jury-voting
-cp .env.production.example .env.production
 ```
 
-Отредактируйте `.env.production`:
-- `SECRET_KEY` — длинный случайный ключ
-- `MYSQL_PASSWORD`, `MYSQL_ROOT_PASSWORD` — свои пароли
-- `CORS_ORIGINS` — ваш домен или IP (`http://your-domain` или `http://<VPS_IP>`)
+### 3. Настройка переменных окружения
 
-### 3) Запуск production-стека
+Скопируйте пример и откройте его в редакторе:
+
+```bash
+cp .env.production.example .env.production
+nano .env.production
+```
+
+Содержимое файла с пояснениями:
+
+```env
+# База данных
+MYSQL_DATABASE=appdb
+MYSQL_USER=app
+MYSQL_PASSWORD=<придумайте надежный пароль для пользователя app>
+MYSQL_ROOT_PASSWORD=<придумайте надежный пароль для root>
+
+# Секрет для подписи JWT-токенов
+# Сгенерировать: python3 -c "import secrets; print(secrets.token_hex(32))"
+SECRET_KEY=<длинная случайная строка>
+
+# Разрешенные источники для CORS
+# Укажите адрес, с которого пользователи открывают приложение
+# Например: http://192.168.1.10 или http://yourdomain.com
+CORS_ORIGINS=http://<IP-адрес или домен сервера>
+```
+
+> Никогда не коммитьте `.env.production` в репозиторий. Файл уже добавлен в `.gitignore`.
+
+### 4. Запуск prod-стека
 
 ```bash
 docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build
 ```
 
-Приложение будет доступно на:
-- `http://<VPS_IP>` (порт 80)
+Флаги:
+- `-d` - запуск в фоне
+- `--build` - пересборка образов перед стартом
 
-Если после деплоя на экране входа видите `Not Found`, проверьте что фронтенд собран с актуальным `docker-compose.prod.yml` (в нём `VITE_API_BASE_URL` должен быть пустым), затем пересоберите:
+После запуска Docker поднимет три контейнера:
+- `mysql` - база данных (данные хранятся в именованном volume `mysql_data`)
+- `backend` - FastAPI-приложение
+- `frontend` - nginx, раздает React-сборку и проксирует `/api` на backend
+
+Проверка, что контейнеры запущены:
 
 ```bash
-docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build --force-recreate
+docker compose -f docker-compose.prod.yml ps
 ```
 
-### 4) Обновление после изменений
+Приложение доступно по адресу `http://<IP-сервера>`.
+
+### 5. Просмотр логов
+
+Все контейнеры сразу:
+
+```bash
+docker compose -f docker-compose.prod.yml logs -f
+```
+
+Конкретный сервис:
+
+```bash
+docker compose -f docker-compose.prod.yml logs -f backend
+docker compose -f docker-compose.prod.yml logs -f frontend
+docker compose -f docker-compose.prod.yml logs -f mysql
+```
+
+### 6. Обновление после изменений в коде
 
 ```bash
 git pull
 docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build
 ```
 
-## Тестовые учетные данные
+Docker пересоберет только измененные образы и перезапустит соответствующие контейнеры. Данные в базе сохранятся - они лежат в volume `mysql_data`.
 
-- `judge1` / `1111`
-- `judge2` / `1111`
-- `judge3` / `1111`
+### 7. Остановка стека
 
-## Что входит в MVP
+```bash
+docker compose -f docker-compose.prod.yml down
+```
 
-- Авторизация по JWT (`/api/auth/login`, `/api/auth/me`)
-- Выбор инициативы (`/api/projects`)
-- Голосование (`/api/votes/{project_id}`)
-- Импорт инициатив из XLSX (`/api/pipeline/projects/import`)
-- Выгрузка в XLSX (`/api/pipeline/votes/export.xlsx`)
-- Данные для диаграммы (`/api/votes/{project_id}`)
-- Статус проголосовавших (`/api/votes/{project_id}/status`)
-- WebSocket: события `vote_submitted` и `voting_complete`
+Остановка с удалением volume (внимание: данные базы будут удалены):
 
+```bash
+docker compose -f docker-compose.prod.yml down -v
+```
+
+### 8. Резервное копирование базы данных
+
+Создать дамп:
+
+```bash
+docker compose -f docker-compose.prod.yml exec mysql \
+  mysqldump -uroot -p"${MYSQL_ROOT_PASSWORD}" appdb > backup_$(date +%Y%m%d).sql
+```
+
+Восстановить из дампа:
+
+```bash
+docker compose -f docker-compose.prod.yml exec -T mysql \
+  mysql -uroot -p"${MYSQL_ROOT_PASSWORD}" appdb < backup_20240101.sql
+```
+
+### 9. Настройка HTTPS (опционально)
+
+Если у вас есть домен, рекомендуется настроить HTTPS через Certbot + nginx на хосте (не внутри контейнера). Схема:
+
+1. Установить nginx на хосте: `sudo apt install nginx`
+2. Получить сертификат: `sudo certbot --nginx -d yourdomain.com`
+3. В конфиге nginx проксировать трафик на `localhost:80` (контейнер frontend)
+4. В `.env.production` поменять `CORS_ORIGINS=https://yourdomain.com`
+5. Пересобрать стек: `docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build`
+
+### 10. Частые проблемы
+
+**На экране входа отображается `Not Found`**
+
+Фронтенд собран со старым значением `VITE_API_BASE_URL`. Пересоберите с флагом `--force-recreate`:
+
+```bash
+docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build --force-recreate
+```
+
+**Backend не стартует, в логах ошибка подключения к MySQL**
+
+MySQL поднимается дольше backend. Стек использует healthcheck, поэтому обычно backend дожидается готовности базы автоматически. Если ошибка повторяется - проверьте корректность `MYSQL_USER`, `MYSQL_PASSWORD`, `MYSQL_DATABASE` в `.env.production`.
+
+**Порт 80 занят**
+
+Узнайте, что занимает порт:
+
+```bash
+sudo lsof -i :80
+```
+
+Остановите мешающий процесс или измените проброс порта в `docker-compose.prod.yml` (`"8080:80"`) и обращайтесь к приложению на порту 8080.
+
+**Данные в базе исчезли после `docker compose down`**
+
+Команда `down` без флага `-v` не трогает volumes. Если данные исчезли - скорее всего, был вызван `down -v`. Восстановите из резервной копии (см. раздел 8).
