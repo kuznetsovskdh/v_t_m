@@ -39,11 +39,20 @@ CREATE TABLE IF NOT EXISTS votes (
 -- Test data
 INSERT INTO users (username, password_hash, display_name, color)
 VALUES
-  ('judge1', '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW', 'Эксперт 1', '#FF6B6B'),
-  ('judge2', '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW', 'Эксперт 2', '#4ECDC4'),
-  ('judge3', '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW', 'Эксперт 3', '#FFE66D')
+  ('judge1',  '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW', 'Эксперт 1',  '#FF6B6B'),
+  ('judge2',  '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW', 'Эксперт 2',  '#4ECDC4'),
+  ('judge3',  '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW', 'Эксперт 3',  '#FFE66D'),
+  ('judge4',  '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW', 'Эксперт 4',  '#845EC2'),
+  ('judge5',  '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW', 'Эксперт 5',  '#FF9671'),
+  ('judge6',  '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW', 'Эксперт 6',  '#00C9A7'),
+  ('judge7',  '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW', 'Эксперт 7',  '#C34B4B'),
+  ('judge8',  '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW', 'Эксперт 8',  '#4B8EC3'),
+  ('judge9',  '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW', 'Эксперт 9',  '#F9C74F'),
+  ('judge10', '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW', 'Эксперт 10', '#90BE6D')
 ON DUPLICATE KEY UPDATE
-  password_hash = VALUES(password_hash);
+  password_hash = VALUES(password_hash),
+  display_name  = VALUES(display_name),
+  color         = VALUES(color);
 
 INSERT INTO projects (title, description, is_active)
 VALUES
