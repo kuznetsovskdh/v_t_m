@@ -54,13 +54,6 @@ ON DUPLICATE KEY UPDATE
   display_name  = VALUES(display_name),
   color         = VALUES(color);
 
-INSERT INTO projects (title, description, is_active)
-VALUES
-  ('EcoTrack — приложение для отслеживания углеродного следа', 'EcoTrack помогает командам измерять и снижать углеродный след с помощью простых метрик, аналитики и привычек.', TRUE)
-ON DUPLICATE KEY UPDATE
-  title = VALUES(title),
-  description = VALUES(description),
-  is_active = VALUES(is_active);
 
 INSERT INTO criteria (name, max_score)
 VALUES

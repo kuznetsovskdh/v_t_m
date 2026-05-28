@@ -290,9 +290,6 @@ export default function VotingPage({ token }) {
               <div className="text-xl font-semibold text-slate-900">
                 {итогScore == null ? "—" : Number.isInteger(итогScore) ? итогScore : итогScore.toFixed(1)} / {maxTotal} баллов
               </div>
-              <div className="mt-1 text-xs text-slate-500">
-                Средняя оценка считается по числу проголосовавших: 1 голос - деление на 1, 2 голоса - на 2, 3 голоса - на 3.
-              </div>
             </div>
           </div>
 

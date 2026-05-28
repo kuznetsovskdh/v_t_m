@@ -66,11 +66,6 @@ export default function LoginPage({ token, onLogin }) {
               {loading ? "Проверяем..." : "Войти"}
             </Button>
 
-            <div className="text-xs text-slate-500">
-              Тестовые данные: <span className="font-medium">judge1/1111</span>,{" "}
-              <span className="font-medium">judge2/1111</span>,{" "}
-              <span className="font-medium">judge3/1111</span>
-            </div>
           </form>
         </Card>
       </div>
