@@ -7,13 +7,13 @@ const API_BASE_URL = normalizeBaseUrl(
 );
 
 async function parseError(res) {
+  const text = await res.text();
   try {
-    const data = await res.json();
+    const data = JSON.parse(text);
     if (data && typeof data.detail === "string") return data.detail;
     if (data && typeof data.message === "string") return data.message;
     return JSON.stringify(data);
   } catch {
-    const text = await res.text();
     return text || `Request failed with ${res.status}`;
   }
 }
@@ -113,4 +113,3 @@ export async function importProjectsXlsx(token, file) {
   if (!res.ok) throw new Error(await parseError(res));
   return res.json();
 }
-
