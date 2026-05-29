@@ -272,7 +272,7 @@ export default function VotingPage({ token }) {
                       setProject({ id: selected.id, title: selected.title, description: selected.description });
                     }}
                   >
-                    {projects.map((p) => (
+                    {[...projects].sort((a, b) => a.title.localeCompare(b.title, "ru")).map((p) => (
                       <option key={p.id} value={p.id}>
                         {p.title.length > 90 ? `${p.title.slice(0, 90)}…` : p.title}
                       </option>
