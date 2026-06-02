@@ -7,10 +7,17 @@ import RadarChart from "../components/RadarChart.jsx";
 import useVotingSocket from "../hooks/useVotingSocket.js";
 import { getActiveProject, getMe, getProjects, getVotes, getVotesExportUrl, getVotesStatus, importProjectsXlsx, postVotesForProject } from "../api/client.js";
 
+const DECISION_OPTIONS = [
+  { value: "unanswered", label: "Не ответил" },
+  { value: "no", label: "Нет" },
+  { value: "yes", label: "Да" },
+];
+
 export default function VotingPage({ token }) {
   const [error, setError] = useState("");
   const [notification, setNotification] = useState("");
   const [importing, setImporting] = useState(false);
+  const [decision, setDecision] = useState("unanswered");
 
   const [projects, setProjects] = useState([]);
   const [project, setProject] = useState(null);
@@ -24,6 +31,8 @@ export default function VotingPage({ token }) {
   const [loading, setLoading] = useState(true);
 
   const projectId = project?.id;
+  const isDecisionYes = decision === "yes";
+  const isDecisionNo = decision === "no";
 
   async function loadProjectData(targetProjectId, currentUser) {
     const [votes, status] = await Promise.all([
@@ -210,6 +219,17 @@ export default function VotingPage({ token }) {
     }
   }
 
+  function onDecisionChange(nextDecision) {
+    setDecision(nextDecision);
+    setNotification("");
+    setError("");
+  }
+
+  function onConfirmNoDecision() {
+    console.log("decision=no");
+    setNotification("Решение подтверждено: Нет");
+  }
+
   useVotingSocket({
     projectId,
     token,
@@ -250,91 +270,132 @@ export default function VotingPage({ token }) {
           )}
         </div>
 
+        <div className="rounded-lg border border-slate-200 bg-white p-4 sm:p-5">
+          <div className="text-sm font-medium text-slate-900">Решение по инициативе</div>
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
+            {DECISION_OPTIONS.map((option) => (
+              <label key={option.value} className="inline-flex items-center gap-2 text-sm text-slate-800">
+                <input
+                  type="radio"
+                  name="initiativeDecision"
+                  value={option.value}
+                  checked={decision === option.value}
+                  onChange={() => onDecisionChange(option.value)}
+                  className="h-4 w-4 border-slate-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span>{option.label}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {!isDecisionYes && !isDecisionNo && error ? (
+          <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>
+        ) : null}
+
         {notification ? (
           <div className="rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
             {notification}
           </div>
         ) : null}
 
-        <div className="rounded-lg border border-slate-200 bg-white p-4 sm:p-5">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between lg:gap-6">
-            <div className="min-w-0 flex-1">
-              {projects.length ? (
-                <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-                  <div className="text-sm font-medium text-slate-900">Инициатива</div>
-                  <select
-                    className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 sm:max-w-[520px]"
-                    value={projectId ?? ""}
-                    onChange={(e) => {
-                      const id = Number(e.target.value);
-                      const selected = projects.find((p) => p.id === id);
-                      if (!selected) return;
-                      setProject({ id: selected.id, title: selected.title, description: selected.description });
-                    }}
-                  >
-                    {[...projects].sort((a, b) => a.title.localeCompare(b.title, "ru")).map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.title.length > 90 ? `${p.title.slice(0, 90)}…` : p.title}
-                      </option>
-                    ))}
-                  </select>
+        {isDecisionNo ? (
+          <div className="rounded-lg border border-slate-200 bg-white p-4 sm:p-5">
+            {error ? <div className="mb-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div> : null}
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="text-sm text-slate-600">
+                Подтвердите решение без выставления оценок по критериям.
+              </div>
+              <Button type="button" onClick={onConfirmNoDecision} className="w-full sm:w-auto">
+                Подтвердить решение
+              </Button>
+            </div>
+          </div>
+        ) : null}
+
+        {isDecisionYes ? (
+          <>
+            <div className="rounded-lg border border-slate-200 bg-white p-4 sm:p-5">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between lg:gap-6">
+                <div className="min-w-0 flex-1">
+                  {projects.length ? (
+                    <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+                      <div className="text-sm font-medium text-slate-900">Инициатива</div>
+                      <select
+                        className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 sm:max-w-[520px]"
+                        value={projectId ?? ""}
+                        onChange={(e) => {
+                          const id = Number(e.target.value);
+                          const selected = projects.find((p) => p.id === id);
+                          if (!selected) return;
+                          setProject({ id: selected.id, title: selected.title, description: selected.description });
+                        }}
+                      >
+                        {[...projects].sort((a, b) => a.title.localeCompare(b.title, "ru")).map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.title.length > 90 ? `${p.title.slice(0, 90)}…` : p.title}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : null}
+                  <h1 className="text-xl font-semibold text-slate-900 sm:text-2xl">
+                    {project?.title ?? "Загрузка..."}
+                  </h1>
+                  <p className="mt-2 whitespace-pre-wrap break-words text-sm text-slate-700 sm:text-base">{project?.description ?? ""}</p>
                 </div>
-              ) : null}
-              <h1 className="text-xl font-semibold text-slate-900 sm:text-2xl">
-                {project?.title ?? "Загрузка..."}
-              </h1>
-              <p className="mt-2 whitespace-pre-wrap break-words text-sm text-slate-700 sm:text-base">{project?.description ?? ""}</p>
-            </div>
-            <div className="text-left lg:text-right">
-              <div className="text-sm text-slate-500">Итог</div>
-              <div className="text-xl font-semibold text-slate-900">
-                {итогScore == null ? "—" : Number.isInteger(итогScore) ? итогScore : итогScore.toFixed(1)} / {maxTotal} баллов
+                <div className="text-left lg:text-right">
+                  <div className="text-sm text-slate-500">Итог</div>
+                  <div className="text-xl font-semibold text-slate-900">
+                    {итогScore == null ? "—" : Number.isInteger(итогScore) ? итогScore : итогScore.toFixed(1)} / {maxTotal} баллов
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
 
-          {error ? <div className="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div> : null}
+              {error ? <div className="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div> : null}
 
-          <div className="mt-5 flex flex-wrap items-center gap-2 sm:gap-3">
-            <div className="text-sm font-medium text-slate-900">Статус проголосовавших</div>
-            <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1">
-              {votesProgress.voted === votesProgress.total && votesProgress.total > 0 ? (
-                <CheckCircle2 className="h-4 w-4 text-green-600" />
-              ) : (
-                <Circle className="h-4 w-4 text-slate-400" />
-              )}
-              <div className="text-sm text-slate-800">
-                Проголосовали: <span className="font-medium">{votesProgress.voted}</span> / {votesProgress.total}
+              <div className="mt-5 flex flex-wrap items-center gap-2 sm:gap-3">
+                <div className="text-sm font-medium text-slate-900">Статус проголосовавших</div>
+                <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1">
+                  {votesProgress.voted === votesProgress.total && votesProgress.total > 0 ? (
+                    <CheckCircle2 className="h-4 w-4 text-green-600" />
+                  ) : (
+                    <Circle className="h-4 w-4 text-slate-400" />
+                  )}
+                  <div className="text-sm text-slate-800">
+                    Проголосовали: <span className="font-medium">{votesProgress.voted}</span> / {votesProgress.total}
+                  </div>
+                </div>
               </div>
+
             </div>
-          </div>
 
-        </div>
+            <form onSubmit={onSubmitVotes} className="rounded-lg border border-slate-200 bg-white p-4 sm:p-5">
+              <div className="grid gap-4">
+                {criteria.map((c) => (
+                  <SliderPanel
+                    key={c.id}
+                    criterion={c}
+                    value={scoresByCriteria[c.id] ?? 1}
+                    disabled={false}
+                    onChange={(v) => setScoresByCriteria((prev) => ({ ...prev, [c.id]: v }))}
+                  />
+                ))}
+              </div>
 
-        <form onSubmit={onSubmitVotes} className="rounded-lg border border-slate-200 bg-white p-4 sm:p-5">
-          <div className="grid gap-4">
-            {criteria.map((c) => (
-              <SliderPanel
-                key={c.id}
-                criterion={c}
-                value={scoresByCriteria[c.id] ?? 1}
-                disabled={false}
-                onChange={(v) => setScoresByCriteria((prev) => ({ ...prev, [c.id]: v }))}
-              />
-            ))}
-          </div>
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+                <div className="text-sm text-slate-600 sm:max-w-[70%]">
+                  {hasVoted ? "Вы уже голосовали за эту инициативу — можно отправить новую оценку." : "Заполните оценки и отправьте голосование."}
+                </div>
+                <Button type="submit" disabled={loading || !projectId} className="w-full sm:w-auto">
+                  {hasVoted ? "Отправить снова" : "Проголосовать"}
+                </Button>
+              </div>
+            </form>
 
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-            <div className="text-sm text-slate-600 sm:max-w-[70%]">
-              {hasVoted ? "Вы уже голосовали за эту инициативу — можно отправить новую оценку." : "Заполните оценки и отправьте голосование."}
-            </div>
-            <Button type="submit" disabled={loading || !projectId} className="w-full sm:w-auto">
-              {hasVoted ? "Отправить снова" : "Проголосовать"}
-            </Button>
-          </div>
-        </form>
-
-        <RadarChart votesData={votesData} />
+            <RadarChart votesData={votesData} />
+          </>
+        ) : null}
       </div>
 
       <div className="fixed inset-x-0 bottom-0 z-50 border-t border-slate-200 bg-white/95 backdrop-blur">
@@ -375,4 +436,3 @@ export default function VotingPage({ token }) {
     </div>
   );
 }
-
