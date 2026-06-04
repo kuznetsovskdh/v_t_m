@@ -8,10 +8,16 @@ import useVotingSocket from "../hooks/useVotingSocket.js";
 import { getActiveProject, getMe, getProjects, getVotes, getVotesExportUrl, getVotesStatus, importProjectsXlsx, postVotesForProject } from "../api/client.js";
 
 const DECISION_OPTIONS = [
-  { value: "unanswered", label: "Не ответил" },
-  { value: "no", label: "Нет" },
-  { value: "yes", label: "Да" },
+  { value: "unanswered", label: "Воздержаться" },
+  { value: "no", label: "Отклонить инициативу" },
+  { value: "yes", label: "Рассмотреть инициативу" },
 ];
+
+function answerToDecision(answer) {
+  if (answer === "Отклонено") return "no";
+  if (answer === "Рассмотреть") return "yes";
+  return "unanswered";
+}
 
 export default function VotingPage({ token }) {
   const [error, setError] = useState("");
@@ -47,10 +53,11 @@ export default function VotingPage({ token }) {
     setHasVoted(Boolean(mine?.has_voted));
 
     const myJudge = votes?.judges?.find((j) => j.user_id === currentUser.id);
+    setDecision(answerToDecision(myJudge?.answer));
     const initScores = {};
     for (const c of votes?.criteria ?? []) {
       const found = myJudge?.scores?.find((s) => s.criteria_id === c.id);
-      initScores[c.id] = found?.score ?? 1;
+      initScores[c.id] = found?.score > 0 ? found.score : 1;
     }
     setScoresByCriteria(initScores);
   }
@@ -132,10 +139,11 @@ export default function VotingPage({ token }) {
     setScoresByCriteria((prev) => {
       const next = { ...prev };
       for (const s of myJudge.scores) {
-        next[s.criteria_id] = s.score ?? 1;
+        next[s.criteria_id] = s.score > 0 ? s.score : 1;
       }
       return next;
     });
+    setDecision(answerToDecision(myJudge.answer));
   }, [votesData, me]);
 
   const criteria = useMemo(() => votesData?.criteria ?? [], [votesData]);
@@ -203,7 +211,10 @@ export default function VotingPage({ token }) {
         score: scoresByCriteria[c.id] ?? 1,
       }));
 
-      await postVotesForProject(token, projectId, payload);
+      await postVotesForProject(token, projectId, {
+        answer: "Рассмотреть",
+        votes: payload,
+      });
 
       // Refresh once immediately; websocket should also keep it in sync.
       const [votes, status] = await Promise.all([
@@ -225,9 +236,28 @@ export default function VotingPage({ token }) {
     setError("");
   }
 
-  function onConfirmNoDecision() {
-    console.log("decision=no");
-    setNotification("Решение подтверждено: Нет");
+  async function onConfirmNoDecision() {
+    setError("");
+    setNotification("");
+    if (!projectId) return;
+    try {
+      await postVotesForProject(token, projectId, {
+        answer: "Отклонено",
+        votes: [],
+      });
+
+      const [votes, status] = await Promise.all([
+        getVotes(token, projectId),
+        getVotesStatus(token, projectId),
+      ]);
+      setVotesData(votes);
+      setStatusData(status);
+      const mine = status.judges.find((j) => j.user_id === me?.id);
+      setHasVoted(Boolean(mine?.has_voted));
+      setNotification("Решение подтверждено: Отклонено");
+    } catch (err) {
+      setError(err?.message || "Failed to submit decision");
+    }
   }
 
   useVotingSocket({

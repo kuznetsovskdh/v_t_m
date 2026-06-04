@@ -187,6 +187,7 @@ async def export_votes_xlsx(
             "criteria_id",
             "criteria_name",
             "score",
+            "answer",
         ]
     )
 
@@ -202,6 +203,7 @@ async def export_votes_xlsx(
                 criteria.id,
                 criteria.name,
                 vote.score,
+                vote.answer,
             ]
         )
 
@@ -231,4 +233,3 @@ async def export_votes_xlsx(
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
-

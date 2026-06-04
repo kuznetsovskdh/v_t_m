@@ -84,6 +84,10 @@ async def on_startup() -> None:
             await conn.execute(text("ALTER TABLE votes DROP INDEX uq_user_project_criteria"))
         except Exception:
             pass
+        try:
+            await conn.execute(text("ALTER TABLE votes ADD COLUMN answer VARCHAR(32) NULL AFTER score"))
+        except Exception:
+            pass
         # Keep demo credentials stable even with persisted DB volumes.
         await conn.execute(
             text(
@@ -121,4 +125,3 @@ async def ws_project(project_id: int, websocket: WebSocket) -> None:
         await ws_manager.disconnect(project_id, websocket)
     except Exception:
         await ws_manager.disconnect(project_id, websocket)
-

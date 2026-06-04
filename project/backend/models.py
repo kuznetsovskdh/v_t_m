@@ -49,6 +49,7 @@ class Vote(Base):
     project_id: Mapped[int] = mapped_column(ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
     criteria_id: Mapped[int] = mapped_column(ForeignKey("criteria.id", ondelete="CASCADE"), nullable=False)
     score: Mapped[int] = mapped_column(Integer, nullable=False)
+    answer: Mapped[str | None] = mapped_column(String(32), nullable=True)
     created_at: Mapped[datetime.datetime] = mapped_column(
         DateTime(timezone=False), server_default=func.now(), nullable=False
     )
@@ -56,4 +57,3 @@ class Vote(Base):
     user: Mapped["User"] = relationship(back_populates="votes")
     project: Mapped["Project"] = relationship(back_populates="votes")
     criteria: Mapped["Criteria"] = relationship(back_populates="votes")
-

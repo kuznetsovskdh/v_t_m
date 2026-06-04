@@ -44,6 +44,11 @@ class VoteItem(BaseModel):
     score: int = Field(ge=1, le=5)
 
 
+class VoteSubmit(BaseModel):
+    answer: Literal["Отклонено", "Рассмотреть", "Воздержаться"]
+    votes: list[VoteItem] = Field(default_factory=list)
+
+
 class SaveVotesResponse(BaseModel):
     project_id: int
     saved: int
@@ -52,12 +57,14 @@ class SaveVotesResponse(BaseModel):
 class CriteriaScoreOut(BaseModel):
     criteria_id: int
     score: Optional[int] = None
+    answer: Optional[str] = None
 
 
 class JudgeVotesOut(BaseModel):
     user_id: int
     display_name: str
     color: str
+    answer: Optional[str] = None
     scores: list[CriteriaScoreOut]
 
 
@@ -81,4 +88,3 @@ class VotesStatusResponse(BaseModel):
 
 class ErrorResponse(BaseModel):
     detail: str
-

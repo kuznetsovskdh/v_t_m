@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS votes (
   project_id INT NOT NULL,
   criteria_id INT NOT NULL,
   score TINYINT NOT NULL,
+  answer VARCHAR(32) NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT fk_votes_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
   CONSTRAINT fk_votes_project FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
@@ -65,4 +66,3 @@ VALUES
 ON DUPLICATE KEY UPDATE
   name = VALUES(name),
   max_score = VALUES(max_score);
-
