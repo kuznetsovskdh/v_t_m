@@ -45,6 +45,7 @@ export default function LoginPage({ token, onLogin }) {
               <div className="mb-1 text-sm font-medium text-slate-900">Логин</div>
               <input
                 className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                autoComplete="username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
               />
@@ -54,6 +55,7 @@ export default function LoginPage({ token, onLogin }) {
               <div className="mb-1 text-sm font-medium text-slate-900">Пароль</div>
               <input
                 type="password"
+                autoComplete="current-password"
                 className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
