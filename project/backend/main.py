@@ -88,6 +88,10 @@ async def on_startup() -> None:
             await conn.execute(text("ALTER TABLE votes ADD COLUMN answer VARCHAR(32) NULL AFTER score"))
         except Exception:
             pass
+        try:
+            await conn.execute(text("ALTER TABLE projects ADD COLUMN batch_id INT NOT NULL DEFAULT 0"))
+        except Exception:
+            pass
         # Keep demo credentials stable even with persisted DB volumes.
         await conn.execute(
             text(

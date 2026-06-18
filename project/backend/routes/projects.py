@@ -16,7 +16,7 @@ async def list_projects(
     current_user=Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ) -> list[ProjectListItem]:
-    res = await session.execute(select(Project).order_by(Project.id.desc()))
+    res = await session.execute(select(Project).order_by(Project.batch_id.desc(), Project.id.asc()))
     projects = list(res.scalars().all())
     return [
         ProjectListItem(

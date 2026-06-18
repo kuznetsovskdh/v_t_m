@@ -5,7 +5,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from fastapi.responses import StreamingResponse
 from openpyxl import Workbook, load_workbook
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from auth import get_current_user
@@ -98,6 +98,11 @@ async def import_projects_xlsx(
     status_idx = header_index.get("статус")
     active_idx = header_index.get("активный")
 
+    # Determine next batch_id
+    max_batch_res = await session.execute(select(func.max(Project.batch_id)))
+    max_batch = max_batch_res.scalar() or 0
+    new_batch_id = max_batch + 1
+
     inserted = 0
     skipped = 0
     last_active_project: Project | None = None
@@ -137,6 +142,7 @@ async def import_projects_xlsx(
             title=title,
             description=full_description or desc or "",
             is_active=bool(is_active) if is_active is not None else False,
+            batch_id=new_batch_id,
         )
         session.add(project)
         inserted += 1
