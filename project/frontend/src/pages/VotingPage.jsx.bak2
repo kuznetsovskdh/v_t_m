@@ -24,6 +24,7 @@ export default function VotingPage({ token }) {
   const [notification, setNotification] = useState("");
   const [importing, setImporting] = useState(false);
   const [decision, setDecision] = useState("unanswered");
+  const [justVoted, setJustVoted] = useState(false);
   const [refreshTick, setRefreshTick] = useState(0);
   const [completedProjectIds, setCompletedProjectIds] = useState(new Set());
 
@@ -117,6 +118,7 @@ export default function VotingPage({ token }) {
       setLoading(true);
       setError("");
       setNotification("");
+      setJustVoted(false);
       try {
         await loadProjectData(projectId, me);
       } catch (err) {
@@ -134,7 +136,6 @@ export default function VotingPage({ token }) {
   }, [projectId]);
 
   useEffect(() => {
-    // When the project changes, sync sliders from the latest votes.
     if (!votesData || !me) return;
     const myJudge = votesData.judges.find((j) => j.user_id === me.id);
     if (!myJudge) return;
@@ -151,7 +152,7 @@ export default function VotingPage({ token }) {
   useEffect(() => {
     let cancelled = false;
     async function loadAllStatuses() {
-      if (!projects.length || !token || !me) {
+      if (!projects.length || !token) {
         setCompletedProjectIds(new Set());
         return;
       }
@@ -163,8 +164,7 @@ export default function VotingPage({ token }) {
         const completed = new Set();
         results.forEach((status, idx) => {
           const judges = status?.judges ?? [];
-          const mine = judges.find((j) => j.user_id === me.id);
-          if (mine?.has_voted) {
+          if (judges.length > 0 && judges.every((j) => j.has_voted)) {
             completed.add(projects[idx].id);
           }
         });
@@ -177,7 +177,7 @@ export default function VotingPage({ token }) {
     return () => {
       cancelled = true;
     };
-  }, [projects, token, me, refreshTick]);
+  }, [projects, token, refreshTick]);
 
   const criteria = useMemo(() => votesData?.criteria ?? [], [votesData]);
   const maxTotal = useMemo(() => criteria.reduce((sum, c) => sum + (c.max_score ?? 5), 0), [criteria]);
@@ -274,7 +274,6 @@ export default function VotingPage({ token }) {
         votes: payload,
       });
 
-      // Refresh once immediately; websocket should also keep it in sync.
       const [votes, status] = await Promise.all([
         getVotes(token, projectId),
         getVotesStatus(token, projectId),
@@ -283,6 +282,7 @@ export default function VotingPage({ token }) {
       setStatusData(status);
       const mine = status.judges.find((j) => j.user_id === me?.id);
       setHasVoted(Boolean(mine?.has_voted));
+      setJustVoted(true);
       setRefreshTick((t) => t + 1);
     } catch (err) {
       setError(err?.message || "Failed to submit votes");
@@ -293,6 +293,7 @@ export default function VotingPage({ token }) {
     setDecision(nextDecision);
     setNotification("");
     setError("");
+    setJustVoted(false);
   }
 
   async function onConfirmNoDecision() {
@@ -314,6 +315,7 @@ export default function VotingPage({ token }) {
       const mine = status.judges.find((j) => j.user_id === me?.id);
       setHasVoted(Boolean(mine?.has_voted));
       setNotification("Решение подтверждено: Отклонено");
+      setJustVoted(true);
       setRefreshTick((t) => t + 1);
     } catch (err) {
       setError(err?.message || "Failed to submit decision");
@@ -440,7 +442,7 @@ export default function VotingPage({ token }) {
               </div>
             </div>
 
-            {hasVoted ? (
+            {justVoted ? (
               <div className="flex items-center gap-2 rounded-full border border-green-200 bg-green-50 px-3 py-1 text-sm text-green-800">
                 <CheckCircle2 className="h-4 w-4 text-green-600" />
                 Вы успешно проголосовали за инициативу!
