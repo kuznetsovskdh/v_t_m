@@ -22,6 +22,22 @@ function authHeader(token) {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
+function handleAuthExpired() {
+  localStorage.removeItem("token");
+  if (window.location.pathname !== "/login") {
+    window.location.replace("/login");
+  }
+}
+
+async function ensureOk(res) {
+  if (res.status === 401) {
+    handleAuthExpired();
+    throw new Error("Сессия истекла, выполните вход снова");
+  }
+  if (!res.ok) throw new Error(await parseError(res));
+  return res;
+}
+
 export async function login(username, password) {
   const res = await fetch(`${API_BASE_URL}/auth/login`, {
     method: "POST",
@@ -38,7 +54,7 @@ export async function getMe(token) {
     method: "GET",
     headers: { "Content-Type": "application/json", ...authHeader(token) },
   });
-  if (!res.ok) throw new Error(await parseError(res));
+  await ensureOk(res);
   return res.json();
 }
 
@@ -47,7 +63,7 @@ export async function getActiveProject(token) {
     method: "GET",
     headers: { "Content-Type": "application/json", ...authHeader(token) },
   });
-  if (!res.ok) throw new Error(await parseError(res));
+  await ensureOk(res);
   return res.json();
 }
 
@@ -56,7 +72,7 @@ export async function getProjects(token) {
     method: "GET",
     headers: { "Content-Type": "application/json", ...authHeader(token) },
   });
-  if (!res.ok) throw new Error(await parseError(res));
+  await ensureOk(res);
   return res.json();
 }
 
@@ -66,7 +82,7 @@ export async function postVotes(token, votes) {
     headers: { "Content-Type": "application/json", ...authHeader(token) },
     body: JSON.stringify(votes),
   });
-  if (!res.ok) throw new Error(await parseError(res));
+  await ensureOk(res);
   return res.json();
 }
 
@@ -76,7 +92,7 @@ export async function postVotesForProject(token, projectId, votes) {
     headers: { "Content-Type": "application/json", ...authHeader(token) },
     body: JSON.stringify(votes),
   });
-  if (!res.ok) throw new Error(await parseError(res));
+  await ensureOk(res);
   return res.json();
 }
 
@@ -85,7 +101,7 @@ export async function getVotes(token, projectId) {
     method: "GET",
     headers: { "Content-Type": "application/json", ...authHeader(token) },
   });
-  if (!res.ok) throw new Error(await parseError(res));
+  await ensureOk(res);
   return res.json();
 }
 
@@ -94,7 +110,7 @@ export async function getVotesStatus(token, projectId) {
     method: "GET",
     headers: { "Content-Type": "application/json", ...authHeader(token) },
   });
-  if (!res.ok) throw new Error(await parseError(res));
+  await ensureOk(res);
   return res.json();
 }
 
@@ -110,6 +126,6 @@ export async function importProjectsXlsx(token, file) {
     headers: { ...authHeader(token) },
     body: form,
   });
-  if (!res.ok) throw new Error(await parseError(res));
+  await ensureOk(res);
   return res.json();
 }

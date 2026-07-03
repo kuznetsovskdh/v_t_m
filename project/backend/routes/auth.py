@@ -13,11 +13,11 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 @router.post("/login", response_model=TokenResponse, responses={401: {"model": ErrorResponse}})
 async def login(payload: LoginRequest, session: AsyncSession = Depends(get_session)) -> TokenResponse:
-    stmt = select(User).where(User.username == payload.username)
+    stmt = select(User).where(User.display_name == payload.username)
     res = await session.execute(stmt)
     user = res.scalar_one_or_none()
     if not user or not verify_password(payload.password, user.password_hash):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid username or password")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Имя не найдено или неверный пароль")
 
     token = create_access_token(user_id=user.id)
     return TokenResponse(access_token=token)

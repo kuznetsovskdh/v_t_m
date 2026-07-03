@@ -24,6 +24,8 @@ export default function VotingPage({ token }) {
   const [notification, setNotification] = useState("");
   const [importing, setImporting] = useState(false);
   const [decision, setDecision] = useState("unanswered");
+  const [refreshTick, setRefreshTick] = useState(0);
+  const [completedProjectIds, setCompletedProjectIds] = useState(new Set());
 
   const [projects, setProjects] = useState([]);
   const [project, setProject] = useState(null);
@@ -146,6 +148,37 @@ export default function VotingPage({ token }) {
     setDecision(answerToDecision(myJudge.answer));
   }, [votesData, me]);
 
+  useEffect(() => {
+    let cancelled = false;
+    async function loadAllStatuses() {
+      if (!projects.length || !token || !me) {
+        setCompletedProjectIds(new Set());
+        return;
+      }
+      try {
+        const results = await Promise.all(
+          projects.map((p) => getVotesStatus(token, p.id).catch(() => null)),
+        );
+        if (cancelled) return;
+        const completed = new Set();
+        results.forEach((status, idx) => {
+          const judges = status?.judges ?? [];
+          const mine = judges.find((j) => j.user_id === me.id);
+          if (mine?.has_voted) {
+            completed.add(projects[idx].id);
+          }
+        });
+        setCompletedProjectIds(completed);
+      } catch {
+        // ignore transient errors when computing completion badges
+      }
+    }
+    loadAllStatuses();
+    return () => {
+      cancelled = true;
+    };
+  }, [projects, token, me, refreshTick]);
+
   const criteria = useMemo(() => votesData?.criteria ?? [], [votesData]);
   const maxTotal = useMemo(() => criteria.reduce((sum, c) => sum + (c.max_score ?? 5), 0), [criteria]);
   const total = useMemo(() => criteria.reduce((sum, c) => sum + (scoresByCriteria[c.id] ?? 0), 0), [criteria, scoresByCriteria]);
@@ -186,6 +219,11 @@ export default function VotingPage({ token }) {
         method: "GET",
         headers: { Authorization: `Bearer ${token}` },
       });
+      if (res.status === 401) {
+        localStorage.removeItem("token");
+        window.location.replace("/login");
+        return;
+      }
       if (!res.ok) throw new Error(`Export failed (${res.status})`);
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
@@ -198,6 +236,26 @@ export default function VotingPage({ token }) {
       window.URL.revokeObjectURL(url);
     } catch (err) {
       setError(err?.message || "Export failed");
+    }
+  }
+
+  async function onImportFile(file) {
+    if (!file) return;
+    setError("");
+    setImporting(true);
+    try {
+      await importProjectsXlsx(token, file);
+      const list = await getProjects(token);
+      setProjects(list);
+      if (!projectId && list.length) {
+        const first = list[0];
+        setProject({ id: first.id, title: first.title, description: first.description });
+      }
+      setRefreshTick((t) => t + 1);
+    } catch (err) {
+      setError(err?.message || "Import failed");
+    } finally {
+      setImporting(false);
     }
   }
 
@@ -225,6 +283,7 @@ export default function VotingPage({ token }) {
       setStatusData(status);
       const mine = status.judges.find((j) => j.user_id === me?.id);
       setHasVoted(Boolean(mine?.has_voted));
+      setRefreshTick((t) => t + 1);
     } catch (err) {
       setError(err?.message || "Failed to submit votes");
     }
@@ -255,6 +314,7 @@ export default function VotingPage({ token }) {
       const mine = status.judges.find((j) => j.user_id === me?.id);
       setHasVoted(Boolean(mine?.has_voted));
       setNotification("Решение подтверждено: Отклонено");
+      setRefreshTick((t) => t + 1);
     } catch (err) {
       setError(err?.message || "Failed to submit decision");
     }
@@ -276,6 +336,7 @@ export default function VotingPage({ token }) {
           const mine = status.judges.find((j) => j.user_id === me.id);
           setHasVoted(Boolean(mine?.has_voted));
         }
+        setRefreshTick((t) => t + 1);
       } catch {
         // ignore transient websocket refresh failures
       }
@@ -284,11 +345,12 @@ export default function VotingPage({ token }) {
       if (project_id === projectId) {
         setNotification("Все жюри проголосовали! Результаты сохранены.");
       }
+      setRefreshTick((t) => t + 1);
     },
   });
 
   return (
-    <div className="min-h-screen bg-slate-50 px-3 py-4 pb-28 sm:px-4 sm:py-8">
+    <div className="min-h-screen bg-slate-50 px-3 py-4 sm:px-4 sm:py-8">
       <div className="mx-auto max-w-5xl space-y-4 sm:space-y-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
           {me ? (
@@ -298,6 +360,25 @@ export default function VotingPage({ token }) {
           ) : (
             <div />
           )}
+
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+            <label className="inline-flex items-center justify-between gap-2 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 sm:w-auto sm:justify-start">
+              <span className="whitespace-nowrap">Импорт инициатив (XLSX)</span>
+              <input
+                type="file"
+                accept=".xlsx"
+                disabled={!me || importing}
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  onImportFile(f);
+                  e.target.value = "";
+                }}
+              />
+            </label>
+            <Button type="button" onClick={downloadExcel} disabled={!me} className="w-full sm:w-auto">
+              Скачать Excel
+            </Button>
+          </div>
         </div>
 
         <div className="rounded-lg border border-slate-200 bg-white p-4 sm:p-5">
@@ -316,11 +397,16 @@ export default function VotingPage({ token }) {
                       setProject({ id: selected.id, title: selected.title, description: selected.description });
                     }}
                   >
-                    {[...projects].sort((a, b) => a.title.localeCompare(b.title, "ru")).map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.title.length > 90 ? `${p.title.slice(0, 90)}…` : p.title}
-                      </option>
-                    ))}
+                    {projects.map((p) => {
+                      const completed = completedProjectIds.has(p.id);
+                      const titleText = p.title.length > 90 ? `${p.title.slice(0, 90)}…` : p.title;
+                      return (
+                        <option key={p.id} value={p.id}>
+                          {completed ? "✅ " : ""}
+                          {titleText}
+                        </option>
+                      );
+                    })}
                   </select>
                 </div>
               ) : null}
@@ -339,18 +425,27 @@ export default function VotingPage({ token }) {
 
           {isDecisionYes && error ? <div className="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div> : null}
 
-          <div className="mt-5 flex flex-wrap items-center gap-2 sm:gap-3">
-            <div className="text-sm font-medium text-slate-900">Статус проголосовавших</div>
-            <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1">
-              {votesProgress.voted === votesProgress.total && votesProgress.total > 0 ? (
-                <CheckCircle2 className="h-4 w-4 text-green-600" />
-              ) : (
-                <Circle className="h-4 w-4 text-slate-400" />
-              )}
-              <div className="text-sm text-slate-800">
-                Проголосовали: <span className="font-medium">{votesProgress.voted}</span> / {votesProgress.total}
+          <div className="mt-5 flex flex-wrap items-center justify-between gap-2 sm:gap-3">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+              <div className="text-sm font-medium text-slate-900">Статус проголосовавших</div>
+              <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1">
+                {votesProgress.voted === votesProgress.total && votesProgress.total > 0 ? (
+                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                ) : (
+                  <Circle className="h-4 w-4 text-slate-400" />
+                )}
+                <div className="text-sm text-slate-800">
+                  Проголосовали: <span className="font-medium">{votesProgress.voted}</span> / {votesProgress.total}
+                </div>
               </div>
             </div>
+
+            {hasVoted ? (
+              <div className="flex items-center gap-2 rounded-full border border-green-200 bg-green-50 px-3 py-1 text-sm text-green-800">
+                <CheckCircle2 className="h-4 w-4 text-green-600" />
+                Вы успешно проголосовали за инициативу!
+              </div>
+            ) : null}
           </div>
         </div>
 
@@ -425,42 +520,6 @@ export default function VotingPage({ token }) {
             <RadarChart votesData={votesData} />
           </>
         ) : null}
-      </div>
-
-      <div className="fixed inset-x-0 bottom-0 z-50 border-t border-slate-200 bg-white/95 backdrop-blur">
-        <div className="mx-auto flex max-w-5xl flex-col gap-2 px-3 py-3 sm:flex-row sm:items-center sm:justify-end sm:gap-3 sm:px-4">
-          <label className="inline-flex w-full items-center justify-between gap-2 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 sm:w-auto sm:justify-start">
-            <span className="whitespace-nowrap">Импорт инициатив (XLSX)</span>
-            <input
-              type="file"
-              accept=".xlsx"
-              disabled={!me || importing}
-              onChange={async (e) => {
-                const f = e.target.files?.[0];
-                if (!f) return;
-                setError("");
-                setImporting(true);
-                try {
-                  await importProjectsXlsx(token, f);
-                  const list = await getProjects(token);
-                  setProjects(list);
-                  if (!projectId && list.length) {
-                    const first = list[0];
-                    setProject({ id: first.id, title: first.title, description: first.description });
-                  }
-                } catch (err) {
-                  setError(err?.message || "Import failed");
-                } finally {
-                  setImporting(false);
-                  e.target.value = "";
-                }
-              }}
-            />
-          </label>
-          <Button type="button" onClick={downloadExcel} disabled={!me} className="w-full sm:w-auto">
-            Скачать Excel
-          </Button>
-        </div>
       </div>
     </div>
   );

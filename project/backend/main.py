@@ -88,16 +88,20 @@ async def on_startup() -> None:
             await conn.execute(text("ALTER TABLE votes ADD COLUMN answer VARCHAR(32) NULL AFTER score"))
         except Exception:
             pass
+        try:
+            await conn.execute(text("ALTER TABLE projects ADD COLUMN batch_id INT NOT NULL DEFAULT 0"))
+        except Exception:
+            pass
         # Keep demo credentials stable even with persisted DB volumes.
         await conn.execute(
             text(
                 """
                 INSERT INTO users (username, password_hash, display_name, color)
                 VALUES
-                  ('judge1',  :password_hash, 'Эксперт 1',  '#FF6B6B'),
-                  ('judge2',  :password_hash, 'Эксперт 2',  '#4ECDC4'),
-                  ('judge3',  :password_hash, 'Эксперт 3',  '#FFE66D'),
-                  ('judge4',  :password_hash, 'Эксперт 4',  '#845EC2'),
+                  ('judge1',  :password_hash, 'Елена',  '#FF6B6B'),
+                  ('judge2',  :password_hash, 'Оксана',  '#4ECDC4'),
+                  ('judge3',  :password_hash, 'Максим',  '#FFE66D'),
+                  ('judge4',  :password_hash, 'Виктор',  '#845EC2'),
                   ('judge5',  :password_hash, 'Эксперт 5',  '#FF9671'),
                   ('judge6',  :password_hash, 'Эксперт 6',  '#00C9A7'),
                   ('judge7',  :password_hash, 'Эксперт 7',  '#C34B4B'),
