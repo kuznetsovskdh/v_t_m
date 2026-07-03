@@ -42,7 +42,7 @@ export default function LoginPage({ token, onLogin }) {
 
           <form onSubmit={onSubmit} className="space-y-4">
             <label className="block">
-              <div className="mb-1 text-sm font-medium text-slate-900">Логин</div>
+              <div className="mb-1 text-sm font-medium text-slate-900">Имя</div>
               <input
                 className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
                 value={username}

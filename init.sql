@@ -40,10 +40,10 @@ CREATE TABLE IF NOT EXISTS votes (
 -- Test data
 INSERT INTO users (username, password_hash, display_name, color)
 VALUES
-  ('judge1',  '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW', 'Эксперт 1',  '#FF6B6B'),
-  ('judge2',  '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW', 'Эксперт 2',  '#4ECDC4'),
-  ('judge3',  '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW', 'Эксперт 3',  '#FFE66D'),
-  ('judge4',  '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW', 'Эксперт 4',  '#845EC2'),
+  ('judge1',  '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW', 'Елена',  '#FF6B6B'),
+  ('judge2',  '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW', 'Оксана',  '#4ECDC4'),
+  ('judge3',  '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW', 'Максим',  '#FFE66D'),
+  ('judge4',  '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW', 'Виктор',  '#845EC2'),
   ('judge5',  '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW', 'Эксперт 5',  '#FF9671'),
   ('judge6',  '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW', 'Эксперт 6',  '#00C9A7'),
   ('judge7',  '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW', 'Эксперт 7',  '#C34B4B'),
