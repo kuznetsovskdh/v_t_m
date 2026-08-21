@@ -313,15 +313,10 @@ docker compose --env-file .env.production -f docker-compose.prod.yml -f docker-c
 ### 1. Сборка фронта ЛОКАЛЬНО
 
 ```bash
-cd project/frontend
 npm run build
 ```
 
 ### 2. Залить dist на сервер
-
-```bash
-rsync, не scp — надёжнее:
-```
 
 ```bash
 rsync -avz --progress dist/ root@___:~/jury-voting/project/frontend/dist/
@@ -330,8 +325,6 @@ rsync -avz --progress dist/ root@___:~/jury-voting/project/frontend/dist/
 ### 3. На сервере: git pull + пересборка ТОЛЬКО backend Backend лёгкий, ~150MB:
 
 ```bash
-ssh root@___
-cd ~/jury-voting
 git stash push .env.production   # если .env.production конфликтует с pull
 git pull origin main
 git stash pop
