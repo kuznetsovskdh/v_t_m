@@ -288,58 +288,75 @@ sudo lsof -i :80
 
 ## 11. Локальный запуск
 
+```bash
 docker compose --env-file .env.production -f docker-compose.prod.yml -f docker-compose.override.yml up -d --build backend mysql
+```
 
 ### Frontend
 
+```bash
 cd project/frontend
 npm install
 npm run dev
+```
 
 ### Проверка статуса
 
 Оба контейнера должны быть Up, backend — не Restarting:
 
+```bash
 docker compose --env-file .env.production -f docker-compose.prod.yml -f docker-compose.override.yml ps
+```
 
 > **Критическое ограничение:** ~875MB RAM на сервере. Сборка фронта (`npm run build`) на сервере гарантированно валит его в OOM.
 
 ### 1. Сборка фронта ЛОКАЛЬНО
 
+```bash
 cd project/frontend
 npm run build
+```
 
 ### 2. Залить dist на сервер
 
+```bash
 rsync, не scp — надёжнее:
+```
 
+```bash
 rsync -avz --progress dist/ root@___:~/jury-voting/project/frontend/dist/
+```
 
-### 3. На сервере: git pull + пересборка ТОЛЬКО backend
+### 3. На сервере: git pull + пересборка ТОЛЬКО backend Backend лёгкий, ~150MB:
 
-Backend лёгкий, ~150MB:
-
+```bash
 ssh root@___
 cd ~/jury-voting
 git stash push .env.production   # если .env.production конфликтует с pull
 git pull origin main
 git stash pop
 docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build backend
+```
 
 ### 4. Скопировать новый dist в уже работающий nginx-контейнер
 
 БЕЗ ребилда frontend:
 
+```bash
 docker cp ~/jury-voting/project/frontend/dist/. jury-voting-frontend-1:/usr/share/nginx/html/
 docker restart jury-voting-frontend-1
+```
 
 > **Никогда не делать на сервере:** `npm install`, `npm run build`, `docker compose up --build frontend` (если Dockerfile.prod фронта делает npm build внутри) — всё это может забить память.
 
 В случае если сервер лёг нужно выполнить проверку свободного места на сервере:
 
+```bash
 df -h
-
+```
+```bash
 free -h
+```
 
 Затем необходимо перезапустить сервер на сайте:
 
