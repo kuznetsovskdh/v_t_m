@@ -286,25 +286,29 @@ sudo lsof -i :80
 
 Команда `down` без флага `-v` не трогает volumes. Если данные исчезли - скорее всего, был вызван `down -v`. Восстановите из резервной копии (см. раздел 8).
 
-#11 Локальный запуск 
+## 11. Локальный запуск 
 
 docker compose --env-file .env.production -f docker-compose.prod.yml -f docker-compose.override.yml up -d --build backend mysql
 
 # Frontend
+
 cd project/frontend
 npm install
 npm run dev
 
-#Проверка статуса(Оба контейнера должны быть Up, backend — не Restarting.):
+# Проверка статуса(Оба контейнера должны быть Up, backend — не Restarting.):
+
 docker compose --env-file .env.production -f docker-compose.prod.yml -f docker-compose.override.yml ps
 
-#Критическое ограничение: ~875MB RAM на сервере. Сборка фронта (npm run build) на сервере гарантированно валит его в OOM.
+## Критическое ограничение: ~875MB RAM на сервере. Сборка фронта (npm run build) на сервере гарантированно валит его в OOM.
 
 # 1. Сборка фронта ЛОКАЛЬНО
+
 cd project/frontend
 npm run build
 
 # 2. Залить dist на сервер (rsync, не scp — надёжнее)
+
 rsync -avz --progress dist/ root@___:~/jury-voting/project/frontend/dist/
 
 # 3. На сервере: git pull + пересборка ТОЛЬКО backend (лёгкий, ~150MB)
@@ -316,17 +320,18 @@ git stash pop
 docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build backend
 
 # 4. Скопировать новый dist в уже работающий nginx-контейнер (БЕЗ ребилда frontend)
+
 docker cp ~/jury-voting/project/frontend/dist/. jury-voting-frontend-1:/usr/share/nginx/html/
 docker restart jury-voting-frontend-1
 
-#Никогда не делать на сервере: npm install, npm run build, docker compose up --build frontend (если Dockerfile.prod фронта делает npm build внутри) — всё это может забить память.
+# Никогда не делать на сервере: npm install, npm run build, docker compose up --build frontend (если Dockerfile.prod фронта делает npm build внутри) — всё это может забить память.
 
-#В случае если сервер лег нужно выполнить проверку свободного места на сервере
+# В случае если сервер лег нужно выполнить проверку свободного места на сервере
 
 df -h
 
 free -h
 
-#Затем необходимо перезапустить сервер на сайте
+# Затем необходимо перезапустить сервер на сайте
 
 https://ruvds.com/ru-rub 
